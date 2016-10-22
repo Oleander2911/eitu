@@ -6,6 +6,7 @@ import pytz, requests
 from datetime import datetime, timedelta
 from jinja2 import Environment, FileSystemLoader
 import ics_parser
+import json
 
 URL_STUDY_ACTIVITIES = 'https://dk.timeedit.net/web/itu/db1/public/ri6Q7Z6QQw0Z5gQ9f50on7Xx5YY00ZQ1ZYQycZw.ics'
 URL_ACTIVITIES = 'https://dk.timeedit.net/web/itu/db1/public/ri6g7058yYQZXxQ5oQgZZ0vZ56Y1Q0f5c0nZQwYQ.ics'
@@ -140,10 +141,19 @@ def render(schedules, wifi):
     logging.info('Rendering index.html')
     env = Environment(loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')))
     template = env.get_template('index.html')
-    return template.render(
+    index_html = template.render(
         title = 'EITU: Empty rooms at ITU',
         empty = [room for room in rooms if room['empty']],
         occupied = [room for room in rooms if not room['empty']],
         updated = format_date(NOW),
         wifi = wifi,
     )
+
+    # Render rooms.json
+    logging.info('Rendering rooms.json')
+    def serializer(obj):
+        if isinstance(obj, timedelta): return int(obj.total_seconds())
+        return None
+    rooms_json = json.dumps(rooms, default=serializer)
+
+    return (index_html, rooms_json)
